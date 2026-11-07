@@ -49,3 +49,36 @@ Valeurs de `status` : `SUCCESS`, `FAILED`, `REFUNDED`, `PENDING`.
 
 ### Cas de test
 `method` = `TEST_DECLINE` (402), `TEST_TIMEOUT` (503) ; total > 50000 refusé (402).
+
+
+## Inventory Service (port 8083)
+
+Dossier : `inventory-service` | Base URL : `http://localhost:8083` (Docker : `http://inventory:8083`)
+Docs : `http://localhost:8083/docs`
+Statut : tous les endpoints sont implémentés et testés (9 tests automatiques + tests manuels Swagger).
+Les `productId` sont les mêmes que ceux du frontend et du Catalog (1 à 6). Ils sont acceptés en nombre ou en chaîne, et renvoyés en chaîne.
+
+### GET /api/inventory
+200 : `[{ "productId": "1", "quantity": 12 }]`
+
+### GET /api/inventory/{productId}
+200 : `{ "productId": "1", "quantity": 12 }`, ou 404 « Product not found. »
+
+### POST /api/inventory/check
+Requête : `{ "items": [{ "productId": "1", "quantity": 2 }] }`. Ne modifie rien.
+Réponse 200 : `{ "available": true, "unavailable": [] }`
+
+### POST /api/inventory/reserve
+Même requête. **Atomique** : tous les produits sont réservés, ou aucun. Les doublons de `productId` sont fusionnés.
+- 200 : `{ "reserved": true }`
+- 409 : `{ "message": "Insufficient stock.", "detail": "...", "unavailable": [{ "productId": "2", "requested": 5, "available": 1 }] }` (le stock n'est pas modifié)
+- 422 : body invalide, au format `{ "message": "Invalid request body.", "detail": "..." }`
+
+### POST /api/inventory/release
+Même requête. Remet le stock (annulation de commande). Réponse 200 : `{ "released": true }`
+
+### GET /health
+`{ "status": "UP", "service": "inventory" }`
+
+### Appelant : Orders (`INVENTORY_URL`, défaut `http://localhost:8083`)
+Orders appelle `reserve` à la création de la commande (un 409 signifie que la commande est refusée) et `release` à l'annulation.
