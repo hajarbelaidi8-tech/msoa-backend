@@ -82,3 +82,90 @@ Même requête. Remet le stock (annulation de commande). Réponse 200 : `{ "rele
 
 ### Appelant : Orders (`INVENTORY_URL`, défaut `http://localhost:8083`)
 Orders appelle `reserve` à la création de la commande (un 409 signifie que la commande est refusée) et `release` à l'annulation.
+
+## Shipping Service (port 8086)
+
+Dossier : `shipping-service` | Base URL : `http://localhost:8086` (Docker : à confirmer) | Database : `shipping_db`
+
+Statut : endpoints REST implémentés. Tests manuels Postman en cours. Intégration avec Orders à vérifier.
+
+### GET /api/shipments
+
+200 : retourne la liste de toutes les livraisons.
+
+### GET /api/shipments/order/{orderId}
+
+200 : retourne la livraison associée à la commande.
+
+404 : aucune livraison trouvée pour cette commande.
+
+### POST /api/shipments
+
+Requête :
+
+{
+  "orderId": "order-demo-001",
+  "address": {
+    "name": "Demo Customer",
+    "address": "123 Main Street",
+    "city": "Casablanca"
+  }
+}
+
+- `orderId` est une chaîne de caractères.
+- `address.name`, `address.address` et `address.city` sont obligatoires.
+- Le montant n'est pas envoyé.
+- Le backend génère l'ID et le numéro de suivi (`trackingNumber`).
+- Le statut initial est `PREPARING`.
+- La création est autorisée uniquement si la commande existe et possède le statut `PAID`.
+- Une seule livraison est autorisée par commande.
+
+Réponse 201 : retourne les informations de la livraison créée, notamment `id`, `orderId`, `trackingNumber`, `name`, `address`, `city`, `status`, `createdAt` et `updatedAt`.
+
+### PATCH /api/shipments/{id}/status
+
+Requête :
+
+{ "status": "SHIPPED" }
+
+Statuts et transitions autorisés :
+
+- `PREPARING` → `SHIPPED`
+- `SHIPPED` → `IN_TRANSIT`
+- `IN_TRANSIT` → `DELIVERED`
+
+400 : transition de statut invalide.
+
+404 : livraison introuvable.
+
+### Format des erreurs
+
+Les erreurs gérées par `GlobalExceptionHandler` utilisent le format :
+
+{ "message": "Error description", "error": "BAD_REQUEST" }
+
+Codes HTTP possibles selon le type d'erreur :
+
+| Code | Cas |
+|---|---|
+| 400 | Données invalides ou transition de statut interdite |
+| 404 | Livraison ou commande introuvable |
+| 409 | Livraison déjà créée pour cette commande |
+| 502 | Erreur de communication avec Orders |
+| 503 | Orders Service indisponible |
+
+### Dépendance : Shipping appelle Orders
+
+URL actuelle : `http://localhost:8084`
+
+- `GET /api/orders/{orderId}` permet de vérifier l'existence de la commande.
+- Le champ `status` de la réponse doit être égal à `PAID`.
+- Si la commande n'est pas payée, Shipping refuse la création de la livraison.
+- Shipping ne modifie pas le statut de la commande et ne confirme pas le paiement.
+- L'adresse de livraison est reçue dans le corps du POST `/api/shipments`.
+
+### Intégration
+
+- Vérification du paiement auprès d'Orders : implémentée, intégration réelle à vérifier.
+- Authentification / JWT : à confirmer.
+- Tests d'intégration avec Orders : en attente.
