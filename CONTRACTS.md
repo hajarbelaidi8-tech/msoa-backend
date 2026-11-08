@@ -163,9 +163,3 @@ URL actuelle : `http://localhost:8084`
 - Si la commande n'est pas payée, Shipping refuse la création de la livraison.
 - Shipping ne modifie pas le statut de la commande et ne confirme pas le paiement.
 - L'adresse de livraison est reçue dans le corps du POST `/api/shipments`.
-
-### Intégration
-
-- Vérification du paiement auprès d'Orders : implémentée, intégration réelle à vérifier.
-- Authentification / JWT : à confirmer.
-- Tests d'intégration avec Orders : en attente.
