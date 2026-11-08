@@ -105,6 +105,20 @@ contract (which uses `error`) are both satisfied:
 { "message": "Invalid email or password.", "error": "Invalid email or password." }
 ```
 
+## Automated tests
+
+```powershell
+python manage.py test
+```
+
+15 tests cover the 4 endpoints, using a temporary test database (the real
+`db.sqlite3` and the demo account are not touched):
+
+- login: success (`user` + `token`, no password), email case/spaces ignored, wrong password (401), unknown email (401), error body has `message` and `error`;
+- register: 201 without token, password stored hashed, missing field (400), duplicate email (409), new account can log in;
+- me: valid token (200), no token (401), invalid token (401);
+- logout: valid token (204), no token (401).
+
 ## Quick test (PowerShell)
 
 ```powershell
