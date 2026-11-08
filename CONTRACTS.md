@@ -85,7 +85,7 @@ Orders appelle `reserve` à la création de la commande (un 409 signifie que la 
 
 ## Shipping Service (port 8086)
 
-Dossier : `shipping-service` | Base URL : `http://localhost:8086` (Docker : à confirmer) | Database : `shipping_db`
+Dossier : `shipping-service` | Base URL : `http://localhost:8086`  | Database : `shipping_db`
 
 Statut : endpoints REST implémentés. Tests manuels Postman en cours. Intégration avec Orders à vérifier.
 
