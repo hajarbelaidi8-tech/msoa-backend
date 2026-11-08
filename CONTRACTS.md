@@ -2,22 +2,22 @@
 
 Dossier : `auth-service` | Base URL : `http://localhost:8081`
 Stack : Django + Django REST Framework + SimpleJWT (SQLite)
-Statut : tous les endpoints sont implémentés et testés manuellement (PowerShell + frontend du professeur avec `AUTH: "rest"`).
+Statut : tous les endpoints sont implémentés et testés (15 tests automatiques avec `python manage.py test` + tests manuels PowerShell et frontend du professeur avec `AUTH: "rest"`).
 
 ### Token
 - Format : JWT (HS256), durée de vie 1 jour.
 - À envoyer sur les routes protégées : `Authorization: Bearer <token>`.
-- Le token contient l'identifiant de l'utilisateur (`user_id`) et la date d'expiration. Il ne contient ni l'email ni le rôle.
+- Le token contient l'identifiant de l'utilisateur (`user_id`) et la date d'expiration. Il ne contient **ni l'email ni le rôle** : pour les obtenir, appeler `GET /api/auth/me`.
 - **Pour vérifier un token, appeler `GET /api/auth/me`** avec le même en-tête. Pas de clé secrète à partager entre services.
 
 ### Objet user
 ```json
 { "id": "user-1", "name": "Demo Customer", "email": "demo@msoa.shop", "role": "CUSTOMER" }
 ```
-`id` est une chaîne : c'est la valeur à utiliser comme `userId` dans les commandes. `role` vaut `CUSTOMER` ou `ADMIN`. Le mot de passe n'est jamais renvoyé.
+`id` est une chaîne (`user-1` pour le compte démo, `user-` suivi de 8 caractères pour les nouveaux comptes) : c'est la valeur à utiliser comme `userId` dans les commandes. `role` vaut `CUSTOMER` ou `ADMIN`. Le mot de passe n'est jamais renvoyé. L'email est stocké en minuscules.
 
 ### POST /api/auth/login
-Requête : `{ "email": "demo@msoa.shop", "password": "demo123" }`
+Requête : `{ "email": "demo@msoa.shop", "password": "demo123" }` (majuscules et espaces autour de l'email ignorés).
 Réponse 200 :
 ```json
 {
@@ -25,28 +25,35 @@ Réponse 200 :
   "token": "<jwt>"
 }
 ```
-Erreur : 401 « Invalid email or password. »
 
 ### POST /api/auth/register
 Requête : `{ "name": "Test User", "email": "test@msoa.shop", "password": "test123" }`
-Réponse 201 : l'objet user (sans token).
-Erreurs : 400 « All fields are required. » / 409 « Email already registered. »
+Réponse 201 : l'objet user (sans token). Le client doit ensuite appeler `login`.
 
 ### POST /api/auth/logout
 Token requis. Réponse 204, sans corps. Le token reste valide jusqu'à son expiration (le frontend supprime sa session).
-Erreur : 401 si le token est absent ou invalide.
 
 ### GET /api/auth/me
-Token requis. Réponse 200 : l'objet user.
-Erreur : 401 si le token est absent, invalide ou expiré.
+Token requis. Réponse 200 : l'objet user (directement, sans enveloppe).
 
-Erreurs, au format `{ "message": "...", "error": "..." }` (le frontend lit `message`).
+### Erreurs
+Format `{ "message": "...", "error": "..." }` (les deux clés ont le même texte ; le frontend lit `message`).
+
+| Code | Message | Endpoint |
+|---|---|---|
+| 400 | All fields are required. | register |
+| 401 | Invalid email or password. | login |
+| 401 | Token absent, invalide ou expiré | logout, me |
+| 409 | Email already registered. | register |
 
 ### Compte de démonstration
 `demo@msoa.shop` / `demo123` (id `user-1`), créé avec `python manage.py seed_demo`.
 
-### Appelants : Orders, Payments, Shipping
-Ces services valident un token en appelant `GET http://localhost:8081/api/auth/me` avec l'en-tête `Authorization` reçu. Orders utilise `user.id` comme `userId` de la commande.
+### Appelants et dépendances
+- Auth n'appelle aucun autre service.
+- Orders, Payments et Shipping valident un token en appelant `GET http://localhost:8081/api/auth/me` avec l'en-tête `Authorization` reçu. Orders utilise `user.id` comme `userId` de la commande.
+
+
 
 ## Payments Service (port 8085)
 
